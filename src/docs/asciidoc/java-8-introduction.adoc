@@ -1,0 +1,321 @@
+= JUnit Introduction
+2015-07-02
+:revnumber: {project-version}
+ifndef::imagesdir[:imagesdir: images]
+ifndef::sourcedir[:sourcedir: ../java]
+
+== Some Definitions
+
+=== Test Automation
+
+Writing and running repeatable verifications
+of the behaviour of an individual piece of code,
+or an entire system.
+
+
+== The value of test automation
+
+The value that a team gets from automated testing **must** be greater
+than the effort that they expend creating and maintaining those tests.
+
+[%step]
+* A valuable test
+** Is _fast_ -> Fast feedback on changes
+** Fails for _one specific reason_ -> Regression testing
+** _Expresses the intent_ of the test -> 'Documentation' on the behaviour of the system
+
+== Automated Unit Testing
+
+Fine-grained control over the unit under test, useful for covering all significant code paths.
+
+Exercise _happy-path_ and _sad-path_ scenarios.
+
+[NOTE.speaker]
+--
+* Solitary
+** One class or method under test
+* Sociable
+** Any other test within the component boundary
+--
+
+== Automated Integration Testing
+
+Used for checking assumptions about other components' interfaces and how they behave.
+
+[%step]
+* Build on the detailed coverage of unit tests
+* Bring in a *Real* External Component
+** e.g. Database - schema and SQL
+** e.g. RESTful service - URIs and payloads
+
+== Automated Functional Testing
+
+Exercise the whole system, or a major subset, through end-to-end scenarios.
+
+[%step]
+* Build on the more detailed integration and unit tests
+* Focus on the happy-path
+
+== Anatomy of an Automated Test
+
+=== Arrange
+
+* Set-up the system / module under test
+** e.g. set configuration parameters, populate DB tables
+
+=== Act
+
+* Invoke some action(s) on the system / module
+** e.g. login and submit a form with valid values
+
+=== Assert
+
+* Verify the expected state
+** e.g. at the correct page, values in the DB as expected
+
+
+
+== Arranging
+
+Bring the state of the system (or part of it) into a known state to
+give _repeatability_.
+
+[%step]
+* May involve
+** initialising variables
+** simple building of objects
+** setting up stub responses of collaborators
+
+[NOTE.speaker]
+--
+WARNING: *If arranging a test swamps out its intent it might mean excessive coupling*
+--
+
+=== Handling Duplication
+
+Test setup may involve duplicating steps, _Test Fixtures_ can help to reduce the
+duplication and express intent.
+
+For example
+
+[source, language="java"]
+----
+DataProvider dataProvider = new StubDataProvider();
+Collaborator collaborator1 = new StubCollaborator();
+Collaborator collaborator2 = new StubCollaborator();
+MyService serviceUnderTest =
+    new MyService(dataProvider, collaborator1, collaborator2);
+----
+
+Becomes
+
+[source, language="java"]
+----
+MyService serviceUnderTest = Fixture.newServiceWithStubs();
+----
+
+
+=== Object Mothers
+
+A common pattern to reduce duplication; a helper or parent class holds a list of pre-defined instances
+
+[source, language="java"]
+----
+Certificate CERTIFICATE_1 = new Certificate() {{
+    setId(1L);
+    setName("testCertificate1");
+    setComment("COMMENT-1001");
+    setAssignedClusters(new ArrayList<String>());
+}};
+----
+
+* Reusing these constants in different tests and contexts
+** couples the tests together (making them more brittle)
+** makes naming them harder
+** confuses intent if reused in graphs of related objects
+
+=== Builders
+
+The Fluent Builder pattern can be used to make assembling objects easier.
+
+[source, language="java"]
+----
+Certificate CERTIFICATE_1 = make(CERTIFICATE_MAKER
+        .but(with(id, 1l),
+             with(name, "testCertificate1")));
+----
+
+* E.g. the 'Make It Easy' library
+** Makes it easier to create a new instance for each test
+** Instances can be named for their role in the specific test
+
+== Acting
+
+Exercise the system/component/class
+
+* One operation
+* Express the intent with variable names if required
+
+[source, language="java"]
+----
+public void whenTheTransactionIsExecuted...() {
+  //...
+  successfulTransaction =
+    Transaction.from(source).to(destination).of(10.00);
+  successfulTransaction.execute();
+  //...
+}
+----
+
+== Asserting
+
+Verify that the system behaved as expected, either through querying _state_
+or verifying _interactions_
+
+=== State-based Testing
+
+Assertions based on _values_
+
+1. Do something which changes the state of the system
+2. Verify the new state
+
+[source, language="java"]
+----
+public void shouldHaveNoBalanceWhenANewAccountIsRegistered() {
+  // ...
+  assertThat(bankAccount.balance(), is(new Money(0.0, GBP)));
+}
+----
+
+_This uses the *Hamcrest* syntax for assertions that read more like an English sentence_
+
+=== Some Useful Hamcrest Assertions
+
+[source, language="java"]
+----
+assertThat(myValue, is(42));
+assertThat(myValue, is(closeTo(42)));
+assertThat(myString, is(not("foo"));
+assertThat(myString, contains("foo"));
+assertThat(myString, matches("^foo[a-z]+$"));
+assertThat(myList, hasItem("bar"));
+assertThat(myList, anyOf(
+                      hasItem("bar"),
+                      hasItem("baz")
+                   );
+----
+
+
+=== Behaviour-based Testing
+
+Assertions based on _interactions_
+
+1. Send a signal
+2. Verify the interactions
+
+[source, language="java"]
+----
+public void
+  whenTheSourceAccountHasInsufficientFundsTheDestinationIsNotCredited() {
+  // ...
+  verify(destinationAccount, never()).credit(anyFloat());
+}
+----
+_A mock-object framework such as *Mockito* can be used_
+
+== Working around problems
+
+=== The class I want to unit test creates expensive resources
+
+* Use a Dependency Injection mechanism (Guice, Spring or Factory pattern)
+* Move initialisation code to a Factory Method and override in the test
+
+=== Factory Method
+[source, language="java"]
+----
+private Collaborator collaborator1 = new ExpensiveCollaborator();
+----
+
+Becomes
+[source, language="java"]
+----
+private Collaborator collaborator1 = newCollaborator1();
+
+protected Collaborator newCollaborator1() {
+  return new ExpensiveCollaborator()
+}
+----
+
+In the test
+[source, language="java"]
+----
+...
+  @Override
+  protected Collaborator newCollaborator1() {
+    return new StubCollaborator()
+  }
+...
+----
+
+=== There's behaviour in a parent class that makes it hard to unit test
+
+Tools such as *Power Mock* can be used to intercept constructors, static
+initialisation & methods and replace fields, but it's usually better to fix the design.
+
+=== There's a Long-running or Asynchronous operation
+
+* Want to wait just long enough for the operation to complete
+* Don't want to wait too long (slow tests) or too little (false failure)
+
+* Tempus Fugit
+[source, language="java"]
+----
+WaitFor.waitOrTimeout(new Condition() {
+    public boolean isSatisfied() {
+        return expectedConditionIsTrue;
+    }
+}, timeout(Duration.seconds(2)));
+----
+
+=== The logic I want to test is in a private method
+[source, language="java"]
+----
+private void complicatedInternalProcessingWithSideEffects() {
+  // use and update private fields
+}
+----
+
+Encapsulate the logic e.g. helper class
+[source, language="java"]
+----
+public class Helper {
+  public Thing complicatedProcessingLogic(Input a, Input b, Input c) {
+    // use parameters and return result
+  }
+}
+----
+
+
+_Also works for moving logic from an abstract parent class to make it testable_
+
+
+== Maintaining Tests
+
+Like any other code, tests need maintenance.
+
+Reasons for a test to change;
+
+* If a test fails for a reason unrelated to a code change
+* If a test runs slowly -> it slows down feedback
+* If a test is unclear in its intent
+* If there is excessive duplication
+* If a test no longer adds value -> delete it
+
+
+== Summary
+
+[%step]
+* Automated testing offers fast feedback, regression testing and documentation
+* Layers of unit, integration and functional tests build confidence in the system
+* Paying attention to the readability of a test makes it more valuable
+* Any code can be tested, but some design choices make it easier
