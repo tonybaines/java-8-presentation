@@ -6,9 +6,10 @@ buildscript {
 
 plugins {
 	id 'org.asciidoctor.convert' version '1.5.2'
-	id 'com.github.jruby-gradle.base' version '0.1.5'
+	id 'com.github.jruby-gradle.base' version '0.1.17'
 }
 
+apply plugin: 'com.github.jruby-gradle.base'
 apply plugin: 'org.ysb33r.vfs'
 apply plugin: 'java'
 apply plugin: 'org.asciidoctor.convert'
@@ -16,15 +17,27 @@ apply plugin: 'org.asciidoctor.convert'
 version = '1.0.0-SNAPSHOT'
 
 ext {
+	jrubyVersion = '1.7.21'
 	revealjsVersion = '2.6.2'
 	asciidoctorBackendVersion = 'master'
 	downloadDir = new File(buildDir,'download')
 	templateDir = new File(downloadDir,'templates')
-	revealjsDir   = new File(downloadDir,'reveal.js')
+	revealjsDir = new File(downloadDir,'reveal.js')
+}
+
+jruby {
+	defaultRepositories = false
+	defaultVersion = jrubyVersion
+	execVersion = jrubyVersion
 }
 
 repositories {
 	jcenter()
+	mavenCentral()
+	maven {
+		name 'rubygems-release'
+		url 'http://rubygems-proxy.torquebox.org/releases'
+	}
 }
 
 task download << {
@@ -44,13 +57,12 @@ download {
 }
 
 asciidoctor {
-
 	sources {
 		include 'java-8-introduction.adoc'
 	}
 
 	resources {
-		from (sourceDir) {
+		from ('src/resources') {
 			include 'images/**'
 		}
 		from (downloadDir) {
@@ -59,6 +71,9 @@ asciidoctor {
 	}
 
 	backends    'revealjs'
+
+	requires = ['asciidoctor-diagram']
+	gemPath file('src/resources/gems')
 
 	attributes	'build-gradle': file('build.gradle'),
 		'sourcedir': project.sourceSets.main.java.srcDirs[0],
@@ -81,5 +96,5 @@ asciidoctor {
 }
 
 wrapper {
-	gradleVersion = '2.7'
+	gradleVersion = '2.9'
 }

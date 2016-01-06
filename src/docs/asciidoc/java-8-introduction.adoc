@@ -13,10 +13,115 @@ ifndef::sourcedir[:sourcedir: ../java]
 
 == Streams
 
+* The idea of chaining together operations to get a result is familiar
+
+[plantuml, "simplified-data-model", png, scaledwidth="100%"]
+----
+@startuml
+(*) -> filter
+-> transform
+-> summarise
+-> (*)
+
+@enduml
+----
+
+=== UNIX command line
+[source]
+-----
+grep 'GCA' records.csv | cut -d',' -f 10,11,12 | awk -F',' {print $1+$2+$3}
+-----
+
+=== SQL
+[source, sql]
+-----
+select f3, sum(f1), avg(f2)
+  from relation
+  where f1 > 500
+  groupby f3
+  having avg(f2) > 50
+-----
+
+=== Java 8 Streams
+
+* *Not* the same as `java.io.InputStream`
+
+[source, java]
+-----
+final int totalForAllMonths_GCA = COINSData
+                .records.stream()
+                .filter((r) -> r.category.equals("GCA"))
+                .map((r) ->
+                  r.april_2010_mth +
+                  r.may_2010_mth +
+                  r.june_2010_mth)
+                .reduce(Integer::sum)
+                .get();
+
+        System.out
+          .println("The total for april, may and june for GCA records is "
+            + totalForAllMonths_GCA);
+-----
+
+=== `Collection.stream()`
+[source]
+-----
+java.util.Collection
+Stream<E> stream()
+Returns a sequential Stream with this collection as its source.
+-----
+
+and
+
+[source, java]
+-----
+java.util.stream
+public interface Stream<T>
+extends BaseStream<T, Stream<T>>
+A sequence of elements supporting sequential and parallel aggregate
+operations.
+-----
+
+=== `Stream` API
+* `filter(Predicate predicate)`
+** the elements of this stream that match the given predicate.
+[source, java]
+-----
+stream.filter(s -> !s.isEmpty())
+-----
+* `map(Function mapper)`
+** apply the given function to the elements of this stream.
+[source, java]
+-----
+stream.map(s -> s.toUpper())
+-----
+* `collect(Collector collector)`
+** Produce a summary result from all the elements of the stream
+[source, java]
+-----
+stream.collect(Collectors.toList())
+stream.collect(Collectors.groupingBy(i -> i % 2 == 0))
+-----
+
+=== `Stream` API
+* `sorted()`
+** return a sorted `Stream` (*expensive*!)
+* `forEach(Consumer action)`
+[source, java]
+-----
+stream.forEach(s -> System.out.println(s) )`
+-----
+* and many more ...
+
+=== `Stream` gotchas
+* Processing steps must be stateless
+* Order matters - terminal vs. intermediate operations
+
 
 == Default Methods in Interfaces
 
 == Functional Programming (Lambdas)
+image:Tail-recursion-is-its-own-reward.png[]
 
 == New Date/Time API
 
