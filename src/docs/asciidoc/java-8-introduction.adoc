@@ -118,6 +118,7 @@ stream.forEach(s -> System.out.println(s) )
 * and many more.  See the `java.util.stream` package javadoc
 
 === `Stream` gotchas
+[%step]
 * Processing steps must be stateless
 ** Don't use or modify external state
 * Complexity
@@ -251,10 +252,121 @@ public class SeniorDeveloper implements JavaDeveloper, Designer {
 }
 -----
 
+=== Method References
+* Can also now define `static` methods in interfaces as well as classes
+** Not inherited, but can be referred to
+
+[source, java]
+-----
+IntStream.rangeClosed(0,10)
+      .filter(i -> i%2 ==0)
+      .reduce(Integer::sum);
+-----
+* Java 8 uses default & static methods to enrich the existing APIs
+** `Integer::sum` is a Functional Interface `java.util.function.BinaryOperator`
+
 == Functional Programming (Lambdas)
 image:Tail-recursion-is-its-own-reward.png[]
+
+=== Functional Interfaces
+[%step]
+* A functional interface has exactly one abstract method
+* Several interfaces defined in `java.util.function`
+** `Function<T,R>` - transform something of type *T* to something of type *R*
+** `BiFunction<T,R,S>` - transform something of type *T* and of type *R* to something of type *S*
+** `Consumer<T>` - accept something of type *T* (assumes a side-effect results)
+** `Predicate<T>` - transform something of type *T* to `boolean`
+** `Supplier<R>` - provides one or more instances of type *R*
+
+=== Implementing Functional Interfaces
+* Can just create instances of the functional interfaces (Java 7 style)
+
+[source, java]
+-----
+class IsEvenPredicate implements Predicate<Integer> {
+  @Override
+  public boolean test(Integer i) {
+    return i %2 == 0;
+  }
+}
+-----
+* More concise to use lambda expressions
+
+=== Lambdas
+
+[source, java]
+-----
+Function<String, Integer> lengthOf = (s) -> s.length();
+-----
+* The type of `s` is inferred (not declared explicitly)
+* The type of `lengthOf`
+** is a `Function` accepting a single `String` parameter and returning an `Integer`
+*** a reference to something that does computation
+
+[source, java]
+-----
+lengthOf.apply("foo") // returns  3
+-----
+
+=== Anonymous Lambda expressions
+* Anywhere a functional interface is expected, an anonymous lambda expression can be used
+
+[source, java]
+-----
+IntPredicate isEven = (i) -> i %2 == 0;
+
+IntStream.rangeClosed(0,10)
+      .filter(isEven)
+-----
+Could be written
+
+[source, java]
+-----
+IntStream.rangeClosed(0,10)
+      .filter( i -> i%2 == 0 )
+-----
 
 == New Date/Time API
 
 == The `Optional` Type
-*
+
+* Express the idea that an API may not return a result
+
+[source, java]
+-----
+  public Booking search(String name) { ... }
+-----
+* May fail to find a booking
+* Use an `Optional` to make it part of the API
+
+[source, java]
+-----
+  public Optional<Booking> search(String name) { ... }
+-----
+
+=== Creating `Optional` values
+[%step]
+* `Optional.of(value)` - definately a non-null value
+* `Optional.empty()` - definately *not* a value
+* `Optional.ofNullable(value)` - a value which _might_ be null
+
+=== Using `Optional` values
+[%step]
+* `opt.isPresent()` - explictly test the value
+* `opt.get()` - get the wrapped value (throws `NoSuchElementException` if there is no value present !)
+* `opt.orElse("default value")` - get the wrapped value, or the default if not present
+
+=== Using `Optional` values
+* `opt.map` - for `Stream` processing without breaking up the chain to check for missing values
+
+[source, java]
+-----
+Optional<FileInputStream> fis =
+  names.stream().filter(name -> !isProcessedYet(name))
+                .findFirst()
+                .map(name -> new FileInputStream(name));
+-----
+
+* Here, `findFirst` returns an `Optional<String>`,
+* `map` returns an `Optional<FileInputStream>` for the desired file if one exists,
+* or an `empty` if not.
