@@ -386,7 +386,7 @@ Optional<FileInputStream> fis =
 
 
 == New Date/Time API
-* IMproves on java.util.Date and java.util.Calendar
+* Improves on java.util.Date and java.util.Calendar
 * Based on Joda-time
 * Handy conversion methods for migration
 * A reminder of why it needed improvement
