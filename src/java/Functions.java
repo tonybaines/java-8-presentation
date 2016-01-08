@@ -11,9 +11,9 @@
  *
  *============================================================================*/
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Optional;
+import java.time.*;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.IntPredicate;
 import java.util.stream.Collectors;
@@ -38,6 +38,23 @@ public class Functions {
 
 
     Optional<String> foo = Optional.of("foo");
-    foo.map() //
+
+    Period periodOfTenDays = Period.ofDays(10);// Amount of time measured in years/months/days
+    Duration durationOfTenDays = Duration.of(10, ChronoUnit.DAYS);// Amount of time recorded to the nanosecond;
+    Instant now = Instant.now();// Specific point in time
+
+    Instant tenDaysFromNow = now.plus(durationOfTenDays);
+
+    LocalTime.parse("10:15:30");
+
+    new java.sql.Date(1234567879).toLocalDate();
+    new java.sql.Timestamp(1234567879).toInstant();
+
+    java.sql.Date.from(Instant.now());
+    java.sql.Timestamp.from(Instant.ofEpochMilli(1234567879));
+
+    java.util.Date.from(Instant.now());
+
+    new java.util.Date().toInstant();
   }
 }

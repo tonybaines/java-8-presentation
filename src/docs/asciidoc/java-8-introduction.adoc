@@ -272,11 +272,11 @@ image:Tail-recursion-is-its-own-reward.png[]
 [%step]
 * A functional interface has exactly one abstract method
 * Several interfaces defined in `java.util.function`
-** `Function<T,R>` - transform something of type *T* to something of type *R*
-** `BiFunction<T,R,S>` - transform something of type *T* and of type *R* to something of type *S*
-** `Consumer<T>` - accept something of type *T* (assumes a side-effect results)
-** `Predicate<T>` - transform something of type *T* to `boolean`
-** `Supplier<R>` - provides one or more instances of type *R*
+** *`Function<T,R>`* - transform something of type *T* to something of type *R*
+** *`BiFunction<T,R,S>`* - transform something of type *T* and of type *R* to something of type *S*
+** *`Consumer<T>`* - accept something of type *T* (assumes a side-effect results)
+** *`Predicate<T>`* - transform something of type *T* to `boolean`
+** *`Supplier<R>`* - provides one or more instances of type *R*
 
 === Implementing Functional Interfaces
 * Can just create instances of the functional interfaces (Java 7 style)
@@ -286,7 +286,7 @@ image:Tail-recursion-is-its-own-reward.png[]
 class IsEvenPredicate implements Predicate<Integer> {
   @Override
   public boolean test(Integer i) {
-    return i %2 == 0;
+    return i%2 == 0;
   }
 }
 -----
@@ -296,24 +296,22 @@ class IsEvenPredicate implements Predicate<Integer> {
 
 [source, java]
 -----
-Function<String, Integer> lengthOf = (s) -> s.length();
+Function<String, Integer> myFunction = (s) -> s.length();
 -----
-* The type of `s` is inferred (not declared explicitly)
-* The type of `lengthOf`
-** is a `Function` accepting a single `String` parameter and returning an `Integer`
-*** a reference to something that does computation
 
-[source, java]
------
-lengthOf.apply("foo") // returns  3
------
+[%step]
+* `myFunction` is a `Function` accepting a `String` and returning an `Integer`
+** a reference to something that does computation
+* The *core principle* of Functional Programming is that functions are *values*
+** Like `String` or `int`
+** Can be passed-in and returned-from methods
 
 === Anonymous Lambda expressions
 * Anywhere a functional interface is expected, an anonymous lambda expression can be used
 
 [source, java]
 -----
-IntPredicate isEven = (i) -> i %2 == 0;
+IntPredicate isEven = (i) -> i%2 == 0;
 
 IntStream.rangeClosed(0,10)
       .filter(isEven)
@@ -327,6 +325,51 @@ IntStream.rangeClosed(0,10)
 -----
 
 == New Date/Time API
+* IMproves on java.util.Date and java.util.Calendar
+* Based on Joda-time
+* Handy conversion methods for migration
+* A reminder of why it needed improvement
+[source,java]
+-----
+Date date = new Date(114, 2, 18); // Tue Mar 18 00:00:00 2014 (?!)
+-----
+
+=== A Fluent API (`java.time` package)
+
+[source, java]
+-----
+LocalDate.parse("2016-01-10"); // Just a date
+LocalTime.parse("10:15:30"); // Just a time-of-day
+LocalDate endOfTime = LocalDate.MAX;
+assert (LocalDate.now().isBefore(endOfTime));
+
+// Amount of time measured in years/months/days
+Period periodOfTenDays = Period.ofDays(10);
+
+// Amount of time recorded to the nanosecond;
+Duration durationOfTenDays = Duration.of(10, ChronoUnit.DAYS);
+
+// Specific point in time
+Instant now = Instant.now();
+
+Instant tenDaysFromNow = now.plus(durationOfTenDays);
+-----
+
+=== Conversion
+* Easy conversion to and from other date types
+
+[source, java]
+-----
+// To the new types from the old ones
+new java.sql.Date(1234567879).toLocalDate();
+new java.sql.Timestamp(1234567879).toInstant();
+new java.util.Date().toInstant();
+
+// To the old types from the new ones
+java.sql.Date.from(Instant.now());
+java.sql.Timestamp.from(Instant.ofEpochMilli(1234567879));
+java.util.Date.from(Instant.now());
+-----
 
 == The `Optional` Type
 
@@ -346,18 +389,18 @@ IntStream.rangeClosed(0,10)
 
 === Creating `Optional` values
 [%step]
-* `Optional.of(value)` - definately a non-null value
-* `Optional.empty()` - definately *not* a value
-* `Optional.ofNullable(value)` - a value which _might_ be null
+* *`Optional.of(value)`* - definately a non-null value
+* *`Optional.empty()`* - definately *not* a value
+* *`Optional.ofNullable(value)`* - a value which _might_ be null
 
 === Using `Optional` values
 [%step]
-* `opt.isPresent()` - explictly test the value
-* `opt.get()` - get the wrapped value (throws `NoSuchElementException` if there is no value present !)
-* `opt.orElse("default value")` - get the wrapped value, or the default if not present
+* *`opt.isPresent()`* - explictly test the value
+* *`opt.get()`* - get the wrapped value (throws `NoSuchElementException` if there is no value present !)
+* *`opt.orElse("default value")`* - get the wrapped value, or the default if not present
 
 === Using `Optional` values
-* `opt.map` - for `Stream` processing without breaking up the chain to check for missing values
+* *`opt.map`* - for `Stream` processing without breaking the chain to check for missing values
 
 [source, java]
 -----
@@ -369,4 +412,4 @@ Optional<FileInputStream> fis =
 
 * Here, `findFirst` returns an `Optional<String>`,
 * `map` returns an `Optional<FileInputStream>` for the desired file if one exists,
-* or an `empty` if not.
+** or an `empty` if not.
