@@ -5,11 +5,198 @@ ifndef::imagesdir[:imagesdir: images]
 ifndef::sourcedir[:sourcedir: ../java]
 
 == What's New?
-* Streams
-* Default Methods in Interfaces
 * Functional Programming (Lambdas)
-* New Date/Time API
+* Default Methods in Interfaces
+* Streams
 * `Optional`
+* New Date/Time API
+
+
+== Functional Interfaces
+[%step]
+* A functional interface has exactly one abstract method
+* Several interfaces defined in `java.util.function`
+** *`Function<T,R>`* - transform something of type *T* to something of type *R*
+** *`BiFunction<T,R,S>`* - transform something of type *T* and of type *R* to something of type *S*
+** *`Consumer<T>`* - accept something of type *T* (assumes a side-effect results)
+** *`Predicate<T>`* - transform something of type *T* to `boolean`
+** *`Supplier<R>`* - provides one or more instances of type *R*
+
+=== Implementing Functional Interfaces
+* Can just create instances of the functional interfaces (Java 7 style)
+
+[source, java]
+-----
+class IsEvenPredicate implements Predicate<Integer> {
+  @Override
+  public boolean test(Integer i) {
+    return i%2 == 0;
+  }
+}
+-----
+* More concise to use lambda expressions
+
+=== Lambdas
+
+[source, java]
+-----
+Predicate<Integer> isEvenPredicate = (i) -> i%2 == 0;
+
+Function<String, Integer> myFunction = (s) -> s.length();
+-----
+
+[%step]
+* `myFunction` is a `Function` accepting a `String` and returning an `Integer`
+** a reference to something that does computation
+* The *core principle* of Functional Programming is that functions are *values*
+** Like `String` or `int`
+** Can be passed-in and returned-from methods
+
+=== Anonymous Lambda expressions
+* Anywhere a functional interface is expected, an anonymous lambda expression can be used
+
+[source, java]
+-----
+IntPredicate isEven = (i) -> i%2 == 0;
+
+IntStream.rangeClosed(0,10)
+      .filter(isEven)
+-----
+Could be written
+
+[source, java]
+-----
+IntStream.rangeClosed(0,10)
+      .filter( i -> i%2 == 0 )
+-----
+
+
+=== Questions?
+
+
+== Default Methods in Interfaces
+* Mainly to help the migration to Lambdas
+* Opens up some useful design options
+
+=== The Java 7 way
+* Up to Java 7, interfaces
+** Define an API
+** Hold static data
+** Allow multiple inheritance of APIs
+
+[source, java]
+-----
+public interface Developer {
+  public static final Period DEFAULT_ESTIMATE = Period.ofDays(2);
+  public Software code(Specification spec, Coffee c);
+  public Period estimate(Specification spec);
+}
+-----
+
+=== Default Methods
+* A common pattern has been to define an interface and an abstract class with default implementation
+
+[source, java]
+-----
+public abstract class DefaultDeveloper implements Developer {
+  public Period estimate(Specification spec) {
+    return DEFAULT_ESTIMATE;
+  }
+}
+-----
+* Java 8 lets us do both in the same place
+
+[source, java]
+-----
+public interface Developer {
+  public static final Period DEFAULT_ESTIMATE = Period.ofDays(2);
+  public Software code(Specification spec, Coffee c);
+  default Period estimate(Specification spec) {
+    return DEFAULT_ESTIMATE;
+  }
+}
+-----
+* *N.B.* No inheritance of _state_
+
+=== Multiple Inheritance
+* Until Java 8 multiple inheritance of _behaviour_ wasn't allowed
+** Diamond Inheritance Problem
+* Java 8 defines strict rules of precendence
+** The class (and the class inheritance heirarchy)
+** The 'most specific' implemented interface
+*** _how close it is in the interface inhertiance heirarchy_
+** Explicit disambiguation (or reuse)
+
+=== Multiple Inheritance
+
+[source, java]
+-----
+public interface JavaDeveloper extends Devloper {
+  default Software code(Specification spec, Coffee c) {
+    Software sw = new JavaSoftware(spec);
+    while(!coffee.empty()) {
+      sw.improve(spec);
+    }
+    return sw;
+  }
+}
+
+public interface Designer {
+  default Specification improve(Specification spec) {
+    return improved(spec);
+  }
+  default Period estimate(Specification spec) {
+    return Period.ofDays(5);
+  }
+}
+-----
+
+=== Multiple Inheritance (Mixins)
+[plantuml, "simplified-data-model", png, scaledwidth="100%"]
+----
+@startuml
+interface Developer {
+  Period estimate(Specification spec)
+  Software code(Specification spec, Coffee c)
+}
+interface JavaDeveloper extends Developer {
+  Software code(Specification spec, Coffee c)
+}
+interface Designer {
+  Period estimate(Specification spec)
+  Specification improve(Specification spec)
+}
+class SeniorDeveloper implements JavaDeveloper, Designer {
+  Period estimate(Specification spec)
+}
+@enduml
+----
+
+[source, java]
+-----
+public class SeniorDeveloper implements JavaDeveloper, Designer {
+  public Period estimate(Specification spec) {
+    return JavaDeveloper.super.estimate(spec)
+            .plus(Designer.super.estimate(spec));
+  }
+}
+-----
+
+=== Method References
+* Can also now define `static` methods in interfaces as well as classes
+** Not inherited, but can be referred to
+
+[source, java]
+-----
+IntStream.rangeClosed(0,10)
+      .filter(i -> i%2 ==0)
+      .reduce(Integer::sum);
+-----
+* Java 8 uses default & static methods to enrich the existing APIs
+** `Integer::sum` is a Functional Interface `java.util.function.BinaryOperator`
+
+=== Questions?
+
 
 == Streams
 
@@ -122,9 +309,9 @@ stream.forEach(s -> System.out.println(s) )
 * Processing steps must be stateless
 ** Don't use or modify external state
 * Complexity
-** Chained operations can build into complex logic
+** Chained anonymous operations can build into complex logic
 ** Hard to test/debug
-** So, pull out into separate lambda functions
+** So, pull out into named lambda functions
 * Order matters - terminal vs. intermediate operations
 ** filter first
 ** avoid sorting
@@ -148,181 +335,55 @@ List<Trader> traders = transactions.stream()
   .collect(toList());
 -----
 
-== Default Methods in Interfaces
-* Mainly to help the migration to Lambdas
-* Opens up some useful design options
+=== Questions?
 
-=== The Java 7 way
-* Up to Java 7, interfaces
-** Define an API
-** Hold static data
-** Allow multiple inheritance of APIs
+
+== The `Optional` Type
+
+* Express the idea that an API may not return a result *e.g.*
 
 [source, java]
 -----
-public interface Developer {
-  public static final Period DEFAULT_ESTIMATE = Period.ofDays(2);
-  public Software code(Specification spec, Coffee c);
-  public Period estimate(Specification spec);
-}
+  public Booking search(String name) { ... }
 -----
+may fail to find a booking
 
-=== Default Methods
-* A common pattern has been to define an interface and an abstract class with default implementation
+* Use an `Optional` to make it part of the API
 
 [source, java]
 -----
-public abstract class DefaultDeveloper implements Developer {
-  public Period estimate(Specification spec) {
-    return DEFAULT_ESTIMATE;
-  }
-}
------
-* Java 8 lets us do both in the same place
-
-[source, java]
------
-public interface Developer {
-  public static final Period DEFAULT_ESTIMATE = Period.ofDays(2);
-  public Software code(Specification spec, Coffee c);
-  default Period estimate(Specification spec) {
-    return DEFAULT_ESTIMATE;
-  }
-}
------
-* *N.B.* No inheritance of _state_
-
-=== Multiple Inheritance
-* Until Java 8 multiple inheritance of _behaviour_ wasn't allowed
-** Diamond Inheritance Problem
-* Java 8 defines strict rules of precendence
-** The class (and the class inheritance heirarchy)
-** The 'most specific' implemented interface
-*** _how close it is in the interface inhertiance heirarchy_
-** Explicit disambiguation (or reuse)
-
-=== Multiple Inheritance
-
-[source, java]
------
-public interface JavaDeveloper extends Devloper {
-  default Software code(Specification spec, Coffee c) {
-    Software sw = new JavaSoftware(spec);
-    while(!coffee.empty()) {
-      sw.improve(spec);
-    }
-    return sw;
-  }
-}
-
-public interface Designer {
-  default Period estimate(Specification spec) {
-    return Period.ofDays(5);
-  }
-}
+  public Optional<Booking> search(String name) { ... }
 -----
 
-=== Multiple Inheritance
-[plantuml, "simplified-data-model", png, scaledwidth="100%"]
-----
-@startuml
-interface Developer {
-  Period estimate(Specification spec)
-  Software code(Specification spec, Coffee c)
-}
-interface JavaDeveloper extends Developer {
-  Software code(Specification spec, Coffee c)
-}
-interface Designer {
-  Period estimate(Specification spec)
-}
-class SeniorDeveloper implements JavaDeveloper, Designer {
-  Period estimate(Specification spec)
-}
-@enduml
-----
-
-[source, java]
------
-public class SeniorDeveloper implements JavaDeveloper, Designer {
-  public Period estimate(Specification spec) {
-    return JavaDeveloper.super.estimate(spec)
-            .plus(Designer.super.estimate(spec));
-  }
-}
------
-
-=== Method References
-* Can also now define `static` methods in interfaces as well as classes
-** Not inherited, but can be referred to
-
-[source, java]
------
-IntStream.rangeClosed(0,10)
-      .filter(i -> i%2 ==0)
-      .reduce(Integer::sum);
------
-* Java 8 uses default & static methods to enrich the existing APIs
-** `Integer::sum` is a Functional Interface `java.util.function.BinaryOperator`
-
-== Functional Programming (Lambdas)
-image:Tail-recursion-is-its-own-reward.png[]
-
-=== Functional Interfaces
+=== Creating `Optional` values
 [%step]
-* A functional interface has exactly one abstract method
-* Several interfaces defined in `java.util.function`
-** *`Function<T,R>`* - transform something of type *T* to something of type *R*
-** *`BiFunction<T,R,S>`* - transform something of type *T* and of type *R* to something of type *S*
-** *`Consumer<T>`* - accept something of type *T* (assumes a side-effect results)
-** *`Predicate<T>`* - transform something of type *T* to `boolean`
-** *`Supplier<R>`* - provides one or more instances of type *R*
+* *`Optional.of(value)`* - definately a non-null value
+* *`Optional.empty()`* - definately *not* a value
+* *`Optional.ofNullable(value)`* - a value which _might_ be null
 
-=== Implementing Functional Interfaces
-* Can just create instances of the functional interfaces (Java 7 style)
-
-[source, java]
------
-class IsEvenPredicate implements Predicate<Integer> {
-  @Override
-  public boolean test(Integer i) {
-    return i%2 == 0;
-  }
-}
------
-* More concise to use lambda expressions
-
-=== Lambdas
-
-[source, java]
------
-Function<String, Integer> myFunction = (s) -> s.length();
------
-
+=== Using `Optional` values
 [%step]
-* `myFunction` is a `Function` accepting a `String` and returning an `Integer`
-** a reference to something that does computation
-* The *core principle* of Functional Programming is that functions are *values*
-** Like `String` or `int`
-** Can be passed-in and returned-from methods
+* *`opt.isPresent()`* - explictly test the value
+* *`opt.get()`* - get the wrapped value (throws `NoSuchElementException` if there is no value present !)
+* *`opt.orElse("default value")`* - get the wrapped value, or the default if not present
 
-=== Anonymous Lambda expressions
-* Anywhere a functional interface is expected, an anonymous lambda expression can be used
+=== Using `Optional` values
+* *`opt.map`* - for `Stream` processing without breaking the chain to check for missing values
 
 [source, java]
 -----
-IntPredicate isEven = (i) -> i%2 == 0;
+Optional<FileInputStream> fis =
+  names.stream().filter(name -> !isProcessedYet(name))
+                .findFirst()
+                .map(name -> new FileInputStream(name));
+-----
 
-IntStream.rangeClosed(0,10)
-      .filter(isEven)
------
-Could be written
+* Here, `findFirst` returns an `Optional<String>`,
+* `map` returns an `Optional<FileInputStream>` for the desired file if one exists,
+** or an `empty` if not.
 
-[source, java]
------
-IntStream.rangeClosed(0,10)
-      .filter( i -> i%2 == 0 )
------
+=== Questions?
+
 
 == New Date/Time API
 * IMproves on java.util.Date and java.util.Calendar
@@ -371,45 +432,8 @@ java.sql.Timestamp.from(Instant.ofEpochMilli(1234567879));
 java.util.Date.from(Instant.now());
 -----
 
-== The `Optional` Type
 
-* Express the idea that an API may not return a result
+=== Questions?
 
-[source, java]
------
-  public Booking search(String name) { ... }
------
-* May fail to find a booking
-* Use an `Optional` to make it part of the API
 
-[source, java]
------
-  public Optional<Booking> search(String name) { ... }
------
-
-=== Creating `Optional` values
-[%step]
-* *`Optional.of(value)`* - definately a non-null value
-* *`Optional.empty()`* - definately *not* a value
-* *`Optional.ofNullable(value)`* - a value which _might_ be null
-
-=== Using `Optional` values
-[%step]
-* *`opt.isPresent()`* - explictly test the value
-* *`opt.get()`* - get the wrapped value (throws `NoSuchElementException` if there is no value present !)
-* *`opt.orElse("default value")`* - get the wrapped value, or the default if not present
-
-=== Using `Optional` values
-* *`opt.map`* - for `Stream` processing without breaking the chain to check for missing values
-
-[source, java]
------
-Optional<FileInputStream> fis =
-  names.stream().filter(name -> !isProcessedYet(name))
-                .findFirst()
-                .map(name -> new FileInputStream(name));
------
-
-* Here, `findFirst` returns an `Optional<String>`,
-* `map` returns an `Optional<FileInputStream>` for the desired file if one exists,
-** or an `empty` if not.
+== End

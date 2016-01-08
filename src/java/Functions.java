@@ -56,5 +56,6 @@ public class Functions {
     java.util.Date.from(Instant.now());
 
     new java.util.Date().toInstant();
+
   }
 }
