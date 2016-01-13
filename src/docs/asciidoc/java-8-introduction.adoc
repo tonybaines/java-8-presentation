@@ -10,6 +10,7 @@ ifndef::sourcedir[:sourcedir: ../java]
 * Streams
 * `Optional`
 * New Date/Time API
+* 'Nashorn' JavaScript engine
 
 
 == Functional Interfaces
@@ -432,6 +433,46 @@ java.sql.Timestamp.from(Instant.ofEpochMilli(1234567879));
 java.util.Date.from(Instant.now());
 -----
 
+
+=== Questions?
+
+== 'Nashorn' JavaScript engine
+* Another JSR-223 engine for the `javax.script` API
+** AWK, Groovy, Pythin, Ruby, Tcl, ...
+* Replaces 'Rhino'
+* Takes advantage of `invokedynamic` from Java 7 for performance
+
+=== Interoperability: Java to JS
+
+[source,java]
+-----
+ScriptEngineManager factory = new ScriptEngineManager();
+ScriptEngine nashornEngine = factory.getEngineByName("nashorn");
+nashornEngine.eval("print('hello world');");
+
+nashornEngine.eval(new FileReader("script.js"));
+Invocable invocable = (Invocable) nashornEngine;
+Object result = invocable.invokeFunction("hello", "world");
+System.out.println(result);
+
+// Pass in a Java object (type information is preserved)
+invocable.invokeFunction("fun2", LocalDateTime.now());
+-----
+
+=== Interoperability: JS to Java
+* JavaScript types are converted to standard or wrapped types
+
+[source,javascript]
+-----
+var MyJavaClass = Java.type('my.package.MyJavaClass');
+
+// class java.lang.String
+var result = MyJavaClass.hello('John Doe');
+print(result)
+
+// class jdk.nashorn.internal.objects.NativeDate
+MyJavaClass.fun2(new Date());
+-----
 
 === Questions?
 
